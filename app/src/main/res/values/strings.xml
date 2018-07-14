@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Slack Client</string>
+    <string name="title_select_channeel_dialog">Select a channel to send</string>
+</resources>
