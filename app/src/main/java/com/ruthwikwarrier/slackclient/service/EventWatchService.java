@@ -1,10 +1,10 @@
 package com.ruthwikwarrier.slackclient.service;
 
+import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.ProgressDialog;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -55,7 +55,9 @@ public class EventWatchService extends Service {
         super.onCreate();
         Log.e(TAG,"onCreate()");
         notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
-        startForeground(1, getOreoNotification("Slack Client running", false, NotificationCompat.VISIBILITY_SECRET ));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForeground(1, getOreoNotification("Slack Client running", false, NotificationCompat.VISIBILITY_SECRET ));
+        }
         apiInterface = APIClient.getClient().create(APIInterface.class);
 
     }
@@ -160,7 +162,12 @@ public class EventWatchService extends Service {
                 if(jsonObject.getString("type").equals("message")){
                     Log.e(TAG, "RTM Event: New message received");
                     broadcastRTMEvent(text);
-                    notificationManager.notify(2, getOreoNotification("New message", true, NotificationCompat.VISIBILITY_PRIVATE));
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        notificationManager.notify(2, getOreoNotification("New message", true, NotificationCompat.VISIBILITY_PRIVATE));
+                    }else{
+                        notificationManager.notify(2, showNotification("New message", true, NotificationCompat.VISIBILITY_PRIVATE));
+                    }
+
                 }
 
             } catch (JSONException e) {
@@ -191,7 +198,7 @@ public class EventWatchService extends Service {
         LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getApplicationContext());
         bm.sendBroadcast(intent);
     }
-
+    @TargetApi(Build.VERSION_CODES.O)
     private Notification getOreoNotification(String title, boolean isCancellable, int visibility){
 
        Intent openMainIntent = new Intent(this, MainActivity.class);
@@ -216,5 +223,25 @@ public class EventWatchService extends Service {
         builder.setPriority(NotificationCompat.PRIORITY_DEFAULT);
         Notification notification = builder.build();
         return notification;
+    }
+
+    private Notification showNotification(String title, boolean isCancellable, int visibility){
+
+        Intent openMainIntent = new Intent(this, MainActivity.class);
+        openMainIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK  | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, openMainIntent, 0);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID);
+        builder.setContentIntent(pendingIntent)
+                .setContentTitle(title)
+                .setOngoing(pinOnTop)
+                .setAutoCancel(false)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setSmallIcon(R.drawable.ic_stat_notification)
+                .setVisibility(visibility);
+
+        Notification notification = builder.build();
+        return notification;
+
     }
 }
